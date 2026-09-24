@@ -1,0 +1,13 @@
+# Environment files
+.env
+
+# n8n local data (if mounted locally)
+data/
+n8n_data/
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

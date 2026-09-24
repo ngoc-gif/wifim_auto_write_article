@@ -1,0 +1,1289 @@
+{
+  "name": "WIFIM - 01 - Auto Write Article",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c1a001-0001",
+      "name": "When clicking ‘Test step’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        120,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-sheet-id",
+              "name": "spreadsheet_id",
+              "value": "YOUR_SPREADSHEET_ID",
+              "type": "string"
+            },
+            {
+              "id": "cfg-sheet-name",
+              "name": "sheet_name",
+              "value": "Content_Tasks",
+              "type": "string"
+            },
+            {
+              "id": "cfg-website-url",
+              "name": "website_source_url",
+              "value": "https://wifim.vn",
+              "type": "string"
+            },
+            {
+              "id": "cfg-drive-root",
+              "name": "root_drive_folder_id",
+              "value": "YOUR_ROOT_DRIVE_FOLDER_ID",
+              "type": "string"
+            },
+            {
+              "id": "cfg-ref-drive",
+              "name": "reference_drive_folder_id",
+              "value": "YOUR_REFERENCE_DRIVE_FOLDER_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1a001-0002",
+      "name": "Workflow Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        340,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "c1a001-0003",
+      "name": "Google Sheets - Read Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allRows = $input.all();\n\n// 1. Lọc các dòng có Status == 'PENDING'\nconst pendingRows = allRows.filter(item => {\n  const status = String(item.json.Status ?? item.json.status ?? '').trim().toUpperCase();\n  return status === 'PENDING';\n});\n\n// CASE D: Không có dòng PENDING nào -> kết thúc bình thường không lỗi\nif (pendingRows.length === 0) {\n  return [];\n}\n\n// 2. Chỉ lấy dòng PENDING đầu tiên\nconst firstTask = pendingRows[0].json;\n\n// 3. Lấy ID thật từ Google Sheet, TUYỆT ĐỐI KHÔNG tự sinh ID giả\nconst rawId = String(firstTask.ID ?? firstTask.id ?? '').trim();\n\n// 4. Normalize Keyword: loại bỏ whitespace, khoảng trắng thuần túy coi là rỗng\nconst cleanKeyword = String(firstTask.Keyword ?? firstTask.keyword ?? '').trim();\n\n// 5. Phân loại validation\nlet validationResult = 'VALID';\nlet errorMessage = '';\n\nif (!rawId) {\n  validationResult = 'ID_EMPTY';\n  errorMessage = 'ID is empty';\n} else if (!cleanKeyword) {\n  validationResult = 'KEYWORD_EMPTY';\n  errorMessage = 'Keyword is empty';\n}\n\nreturn [{\n  json: {\n    ID: rawId,\n    row_number: firstTask.row_number,\n    Keyword: cleanKeyword,\n    Status: 'PENDING',\n    Created_At: firstTask.Created_At || firstTask.created_at || '',\n    validation_result: validationResult,\n    error_message: errorMessage\n  }\n}];"
+      },
+      "id": "c1a001-0004",
+      "name": "Filter & Take First PENDING Task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-has-id",
+              "leftValue": "={{ $json.validation_result }}",
+              "rightValue": "ID_EMPTY",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1a001-0005",
+      "name": "Check ID Not Empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1000,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-valid-kw",
+              "leftValue": "={{ $json.validation_result }}",
+              "rightValue": "VALID",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1a001-0006",
+      "name": "Check Keyword Not Empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1220,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID"
+          ],
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "Status": "PROCESSING",
+            "Error_Message": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "c1a001-0007",
+      "name": "Update Row: PROCESSING",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1460,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID"
+          ],
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "Status": "ERROR",
+            "Error_Message": "Keyword is empty"
+          }
+        },
+        "options": {}
+      },
+      "id": "c1a001-0008",
+      "name": "Update Row: ERROR (Keyword Empty)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1460,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Status": "ERROR",
+            "Error_Message": "ID is empty"
+          }
+        },
+        "options": {}
+      },
+      "id": "c1a001-0009",
+      "name": "Update Row: ERROR (ID Empty)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1220,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP C1: Khôi phục toàn bộ business context từ node gốc\nconst originalTask = $('Filter & Take First PENDING Task').first().json;\nconst config = $('Workflow Config').first().json;\n\nreturn [{\n  json: {\n    ID: originalTask.ID,\n    row_number: originalTask.row_number,\n    Keyword: originalTask.Keyword,\n    Created_At: originalTask.Created_At,\n    Status: 'PROCESSING',\n    website_source_url: config.website_source_url || 'https://wifim.vn'\n  }\n}];"
+      },
+      "id": "c1a001-0010",
+      "name": "Restore Task Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.website_source_url }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "c1a001-0011",
+      "name": "Fetch WIFIM Source URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1900,
+        120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP C3: Làm sạch và chuẩn hóa dữ liệu nguồn WIFIM\nconst context = $('Restore Task Context').first().json;\nconst responseItem = $input.first().json || {};\nconst targetUrl = context.website_source_url || 'https://wifim.vn';\n\nlet rawData = '';\nif (typeof responseItem === 'string') {\n  rawData = responseItem;\n} else if (responseItem.data && typeof responseItem.data === 'string') {\n  rawData = responseItem.data;\n} else if (responseItem.body && typeof responseItem.body === 'string') {\n  rawData = responseItem.body;\n} else {\n  rawData = JSON.stringify(responseItem);\n}\n\n// Kiểm tra nếu có lỗi HTTP hoặc rỗng\nconst hasHttpError = Boolean(responseItem.error || responseItem.statusCode >= 400 || !rawData || rawData === '{}');\n\nlet cleanedText = '';\nlet sourceFetchStatus = 'success';\nlet sourcesUsed = [];\nlet researchMode = 'SOURCE_PLUS_LLM_INFERENCE';\nlet searchIntentBasis = 'keyword_and_source_inference';\nlet sourceWarning = '';\n\nif (hasHttpError) {\n  sourceFetchStatus = 'failed';\n  sourcesUsed = [];\n  researchMode = 'LLM_INFERENCE_ONLY';\n  searchIntentBasis = 'keyword_only_inference';\n  sourceWarning = 'WIFIM source could not be fetched';\n  cleanedText = '';\n} else {\n  sourceFetchStatus = 'success';\n  sourcesUsed = [targetUrl];\n  researchMode = 'SOURCE_PLUS_LLM_INFERENCE';\n  searchIntentBasis = 'keyword_and_source_inference';\n  sourceWarning = '';\n\n  // Tiến hành làm sạch HTML có cấu trúc\n  let text = rawData;\n  text = text.replace(/<!--[\\s\\S]*?-->/g, '');\n  text = text.replace(/<!DOCTYPE[^>]*>/gi, '');\n  text = text.replace(/<script\\b[^<]*(?:(?!<\\/script>)<[^<]*)*<\\/script>/gi, ' ');\n  text = text.replace(/<style\\b[^<]*(?:(?!<\\/style>)<[^<]*)*<\\/style>/gi, ' ');\n  text = text.replace(/<noscript\\b[^<]*(?:(?!<\\/noscript>)<[^<]*)*<\\/noscript>/gi, ' ');\n  text = text.replace(/<(?:nav|header|footer|svg)\\b[^<]*(?:(?!<\\/(?:nav|header|footer|svg)>)<[^<]*)*<\\/(?:nav|header|footer|svg)>/gi, ' ');\n  text = text.replace(/<\\/?[a-z][a-z0-9]*[^<>]*>/gi, '\\n');\n  text = text.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '\"').replace(/&#39;/gi, \"'\");\n  text = text.split('\\n').map(l => l.trim()).filter(l => l.length > 0).join('\\n');\n\n  // Giới hạn trong khoảng 2500 - 3000 ký tự\n  cleanedText = text.slice(0, 3000);\n}\n\nreturn [{\n  json: {\n    ID: context.ID,\n    row_number: context.row_number,\n    Keyword: context.Keyword,\n    Created_At: context.Created_At,\n    Status: 'PROCESSING',\n    cleaned_source_text: cleanedText,\n    sources_used: sourcesUsed,\n    source_fetch_status: sourceFetchStatus,\n    source_warning: sourceWarning,\n    research_mode: researchMode,\n    search_intent_basis: searchIntentBasis\n  }\n}];"
+      },
+      "id": "c1a001-0012",
+      "name": "Clean Source Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2120,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là một chuyên gia SEO và Nghiên cứu Thị trường hàng đầu.\nNhiệm vụ: Phân tích từ khóa \"{{ $json.Keyword }}\" để làm cơ sở xây dựng cấu trúc bài viết website doanh nghiệp.\n\nTHÔNG TIN ĐẦU VÀO:\n- Từ khóa chính: {{ $json.Keyword }}\n- Trạng thái nguồn WIFIM: {{ $json.source_fetch_status }}\n- Chế độ nghiên cứu: {{ $json.research_mode }}\n- Cơ sở xác định ý định: {{ $json.search_intent_basis }}\n- Nguồn đã sử dụng: {{ JSON.stringify($json.sources_used) }}\n- Cảnh báo nguồn: {{ $json.source_warning }}\n- Nội dung thực tế trích xuất từ website WIFIM (chỉ có giá trị nếu trạng thái nguồn là success):\n\"\"\"\n{{ $json.cleaned_source_text }}\n\"\"\"\n\nHƯỚNG DẪN PHÂN TÍCH:\n1. Về ý định tìm kiếm (search_intent): Đánh giá ý định tìm kiếm của khách hàng doanh nghiệp khi tìm kiếm từ khóa \"{{ $json.Keyword }}\".\n2. Về bối cảnh thương hiệu (brand_context): Tóm tắt trung thực các dịch vụ, định vị và giải pháp Digital Marketing của WIFIM dựa trên nội dung nguồn thật được cung cấp ở trên. Tuyệt đối KHÔNG biến mục tiêu/lợi ích marketing thành factual claim hay cam kết riêng của WIFIM.\n3. Về từ khóa liên quan (related_keywords): Đề xuất 4-6 từ khóa phụ/LSI thực tế phục vụ cho bài viết.\n4. Về tóm tắt phân tích (analysis_summary): Đưa ra 3-4 luận điểm trọng tâm về chuyên môn ngành mà bài viết cần giải quyết để đáp ứng tốt nhất ý định người đọc. Tuyệt đối KHÔNG đề xuất luận điểm về \"các thành công đã đạt được từ khách hàng\", case study hay bằng chứng khách hàng nếu trong nguồn không có.\n\nReturn ONLY valid JSON.\n\nRequired JSON structure:\n\n{\n  \"search_intent\": \"\",\n  \"brand_context\": \"\",\n  \"related_keywords\": [],\n  \"analysis_summary\": \"\"\n}\n\nRules:\n\n- search_intent: string\n- brand_context: string\n- related_keywords: array of strings\n- analysis_summary: string\n\nDo not return markdown.\nDo not return ```json code fences.\nDo not add explanations before or after JSON.\nDo not add extra fields.\n\nFACTUAL RULES:\n\nbrand_context chỉ được chứa thông tin có trong cleaned_source_text.\n\nNếu không có factual WIFIM source:\nbrand_context = \"\"\n\nCẤM TỰ BỊA VÀ CẤM PHÓNG ĐẠI THÔNG TIN:\n- Tuyệt đối không biến mục tiêu/lợi ích chung của marketing thành factual claim về WIFIM.\n- Nghiêm cấm tự viết: WIFIM cam kết tăng trưởng doanh thu, khách hàng WIFIM đã đạt thành công, case study/customer result, KPI cam kết hoặc reporting capability nếu cleaned_source_text không có bằng chứng cụ thể.\n- analysis_summary tuyệt đối không được đề xuất các thành công đã đạt được từ khách hàng nếu không có customer/case-study source.\n- Không được bịa: Google SERP, competitor analysis, People Also Ask, URLs, số khách hàng, doanh thu, thành tích.\n\nsearch_intent, related_keywords và analysis_summary được phép là AI inference về mặt kiến thức ngành.",
+        "hasOutputParser": false
+      },
+      "id": "c1a001-0013",
+      "name": "AI Research Analysis",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2340,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "c1a001-0014",
+      "name": "OpenAI Model (Research)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2340,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nlet raw =\n  item.text ??\n  item.output ??\n  item.response ??\n  item;\n\nlet parsed;\n\nif (\n  typeof raw === 'object' &&\n  raw !== null &&\n  !Array.isArray(raw)\n) {\n  parsed = raw;\n} else {\n  raw = String(raw ?? '').trim();\n\n  raw = raw\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/```$/i, '')\n    .trim();\n\n  const firstBrace = raw.indexOf('{');\n  const lastBrace = raw.lastIndexOf('}');\n\n  if (firstBrace !== -1 && lastBrace !== -1) {\n    raw = raw.slice(firstBrace, lastBrace + 1);\n  }\n\n  try {\n    parsed = JSON.parse(raw);\n  } catch (error) {\n    throw new Error(\n      'AI Research returned invalid JSON: ' +\n      raw.slice(0, 500)\n    );\n  }\n}\n\nconst research =\n  parsed.output &&\n  typeof parsed.output === 'object'\n    ? parsed.output\n    : parsed;\n\nreturn [{\n  json: {\n    output: {\n      search_intent: String(\n        research.search_intent ?? ''\n      ).trim(),\n\n      brand_context: String(\n        research.brand_context ?? ''\n      ).trim(),\n\n      related_keywords:\n        Array.isArray(research.related_keywords)\n          ? research.related_keywords\n              .map(v => String(v).trim())\n              .filter(Boolean)\n          : [],\n\n      analysis_summary: String(\n        research.analysis_summary ?? ''\n      ).trim()\n    }\n  }\n}];"
+      },
+      "id": "c1a001-0018",
+      "name": "Parse AI Research JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP C5: Chuẩn hóa và bảo toàn ID dòng trước khi lưu vào Google Sheet\nconst taskContext = $('Restore Task Context').first().json;\nconst cleanData = $('Clean Source Data').first().json;\nconst aiOutput = $input.first().json.output || $input.first().json;\n\n// Đảm bảo tuân thủ nghiêm ngặt quy tắc schema\nconst researchObject = {\n  search_intent: aiOutput.search_intent || '',\n  search_intent_basis: cleanData.search_intent_basis,\n  brand_context: cleanData.source_fetch_status === 'failed' ? '' : (aiOutput.brand_context || ''),\n  competitor_analysis: '',\n  people_also_ask: [],\n  top_urls: [],\n  related_keywords: Array.isArray(aiOutput.related_keywords) ? aiOutput.related_keywords : [],\n  related_keywords_source: 'llm_suggestion',\n  analysis_summary: aiOutput.analysis_summary || '',\n  sources_used: cleanData.sources_used,\n  source_fetch_status: cleanData.source_fetch_status,\n  source_warning: cleanData.source_warning,\n  research_mode: cleanData.research_mode\n};\n\nreturn [{\n  json: {\n    ID: taskContext.ID,\n    row_number: taskContext.row_number,\n    Keyword: taskContext.Keyword,\n    Status: 'PROCESSING',\n    Research_Result: JSON.stringify(researchObject, null, 2)\n  }\n}];"
+      },
+      "id": "c1a001-0016",
+      "name": "Format Research Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2780,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID"
+          ],
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "Research_Result": "={{ $json.Research_Result }}",
+            "Status": "PROCESSING",
+            "Error_Message": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "c1a001-0017",
+      "name": "Update Row: Save Research Result",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3000,
+        120
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP D1 & D2: Khôi phục task context và chuẩn bị Research Object\nconst taskContext = $('Filter & Take First PENDING Task').first().json;\nconst formatResearchNode = $('Format Research Result').first().json;\n\nconst rawResearch = formatResearchNode.Research_Result;\nif (!rawResearch || typeof rawResearch !== 'string' || !rawResearch.trim()) {\n  throw new Error('Research_Result is empty in STEP D');\n}\n\nlet researchObj;\ntry {\n  researchObj = JSON.parse(rawResearch);\n} catch (e) {\n  throw new Error('Research_Result is invalid JSON in STEP D: ' + String(rawResearch).slice(0, 300));\n}\n\nif (!researchObj || typeof researchObj !== 'object' || !researchObj.search_intent || !String(researchObj.search_intent).trim()) {\n  throw new Error('Research_Result missing valid search_intent in STEP D');\n}\n\nreturn [{\n  json: {\n    ID: taskContext.ID,\n    row_number: taskContext.row_number,\n    Keyword: taskContext.Keyword,\n    Status: 'PROCESSING',\n    Research_Result: rawResearch,\n    search_intent: String(researchObj.search_intent || '').trim(),\n    brand_context: String(researchObj.brand_context || '').trim(),\n    related_keywords: Array.isArray(researchObj.related_keywords) ? researchObj.related_keywords : [],\n    analysis_summary: String(researchObj.analysis_summary || '').trim(),\n    research_mode: String(researchObj.research_mode || '').trim(),\n    sources_used: Array.isArray(researchObj.sources_used) ? researchObj.sources_used : [],\n    competitor_analysis: String(researchObj.competitor_analysis || '').trim(),\n    people_also_ask: Array.isArray(researchObj.people_also_ask) ? researchObj.people_also_ask : [],\n    top_urls: Array.isArray(researchObj.top_urls) ? researchObj.top_urls : []\n  }\n}];"
+      },
+      "id": "c1a001-0019",
+      "name": "Restore Outline Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3220,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là Content Architect và SEO Content Planner.\n\nINPUT:\nKeyword: {{ $json.Keyword }}\nSearch Intent: {{ $json.search_intent }}\nBrand Context: {{ $json.brand_context }}\nRelated Keywords: {{ JSON.stringify($json.related_keywords) }}\nAnalysis Summary: {{ $json.analysis_summary }}\nResearch Mode: {{ $json.research_mode }}\nSources Used: {{ JSON.stringify($json.sources_used) }}\n\nNếu competitor_analysis / people_also_ask / top_urls rỗng:\ncoi như KHÔNG có dữ liệu Google SERP thật.\n\nNhiệm vụ:\nTạo outline bài viết logic, phục vụ Search Intent và Keyword.\n\nPHÂN BIỆT RÕ RÀNG NỘI DUNG:\n1. GENERAL INDUSTRY CONTENT: Kiến thức, lợi ích, giải pháp, phương pháp chung về ngành Digital Marketing cho doanh nghiệp.\n2. WIFIM FACTUAL CONTENT: Chỉ đề cập đến WIFIM khi thông tin được hỗ trợ trực tiếp từ Brand Context.\n\nRULES:\n\n1. Title:\n- chứa keyword chính tự nhiên\n- khoảng 55-65 ký tự nếu phù hợp\n- không dùng: \"tốt nhất\", \"số 1\", \"duy nhất\" hoặc claim phóng đại\n\n2. Meta Description:\n- khoảng 140-160 ký tự\n- chứa keyword tự nhiên\n- đúng nội dung bài\n- không bịa ưu đãi/cam kết/số liệu\n\n3. Outline:\n- H2/H3 logic, ưu tiên giải quyết Search Intent\n- sử dụng related_keywords tự nhiên, không nhồi keyword\n- CHỈ tạo heading khẳng định về WIFIM khi Brand Context hỗ trợ trực tiếp.\n- KHÔNG tạo heading kiểu: \"Cách WIFIM giúp doanh nghiệp tăng trưởng doanh thu\" nếu source chỉ nói về mục tiêu/lợi ích chung.\n- CẤM TẠO HEADING VỀ: case study, khách hàng thành công, khách hàng nói gì, KPI cam kết, reporting/báo cáo chuyên sâu, doanh thu thực tế nếu Brand Context không có factual evidence cụ thể.\n- không tạo competitor analysis nếu chưa có dữ liệu thật\n- không tạo PAA giả\n- H2 cuối có thể là kết luận, lời khuyên hoặc định hướng liên hệ tư vấn phù hợp\n\n4. Slug:\n- lowercase\n- không dấu\n- dùng dấu -\n\nOUTPUT:\nReturn ONLY valid JSON.\n\nRequired JSON:\n\n{\n  \"title\": \"\",\n  \"meta_description\": \"\",\n  \"slug\": \"\",\n  \"outline\": [\n    {\n      \"heading2\": \"\",\n      \"subheadings\": [\n        {\n          \"heading3\": \"\"\n        }\n      ]\n    }\n  ]\n}\n\nDo not return markdown.\nDo not return ```json.\nDo not add explanation before/after JSON.\nDo not add extra fields.",
+        "hasOutputParser": false
+      },
+      "id": "c1a001-0020",
+      "name": "AI Generate Outline",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        3440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "c1a001-0021",
+      "name": "OpenAI Model (Outline)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nlet raw =\n  item.text ??\n  item.output ??\n  item.response ??\n  item;\n\nlet parsed;\n\nif (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {\n  parsed = raw;\n} else {\n  raw = String(raw ?? '').trim();\n  raw = raw\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/```$/i, '')\n    .trim();\n\n  const firstBrace = raw.indexOf('{');\n  const lastBrace = raw.lastIndexOf('}');\n\n  if (firstBrace !== -1 && lastBrace !== -1) {\n    raw = raw.slice(firstBrace, lastBrace + 1);\n  }\n\n  try {\n    parsed = JSON.parse(raw);\n  } catch (error) {\n    throw new Error('AI Outline returned invalid JSON: ' + raw.slice(0, 500));\n  }\n}\n\nconst data =\n  parsed.output && typeof parsed.output === 'object' && !Array.isArray(parsed.output)\n    ? parsed.output\n    : parsed;\n\nconst title = String(data.title ?? '').trim();\nconst metaDescription = String(data.meta_description ?? data.metaDescription ?? '').trim();\nconst slug = String(data.slug ?? '').trim();\n\nif (!title) {\n  throw new Error('AI Outline returned invalid JSON: Missing or empty title');\n}\nif (!metaDescription) {\n  throw new Error('AI Outline returned invalid JSON: Missing or empty meta_description');\n}\nif (!slug) {\n  throw new Error('AI Outline returned invalid JSON: Missing or empty slug');\n}\nif (!Array.isArray(data.outline) || data.outline.length === 0) {\n  throw new Error('AI Outline returned invalid JSON: outline must be a non-empty array');\n}\n\nconst validatedOutline = data.outline.map((item, idx) => {\n  if (!item || typeof item !== 'object') {\n    throw new Error(`AI Outline returned invalid JSON: outline item at index ${idx} is not an object`);\n  }\n  const heading2 = String(item.heading2 ?? item.h2 ?? '').trim();\n  if (!heading2) {\n    throw new Error(`AI Outline returned invalid JSON: outline item at index ${idx} missing heading2`);\n  }\n  const rawSubs = Array.isArray(item.subheadings)\n    ? item.subheadings\n    : Array.isArray(item.sub_headings)\n      ? item.sub_headings\n      : [];\n\n  const subheadings = rawSubs.map((sub) => {\n    if (typeof sub === 'string') {\n      return { heading3: sub.trim() };\n    }\n    if (sub && typeof sub === 'object') {\n      return { heading3: String(sub.heading3 ?? sub.h3 ?? '').trim() };\n    }\n    return { heading3: '' };\n  }).filter(s => s.heading3.length > 0);\n\n  return {\n    heading2: heading2,\n    subheadings: subheadings\n  };\n});\n\nreturn [{\n  json: {\n    output: {\n      title: title,\n      meta_description: metaDescription,\n      slug: slug,\n      outline: validatedOutline\n    }\n  }\n}];"
+      },
+      "id": "c1a001-0022",
+      "name": "Parse Outline JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3660,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP D5: Format kết quả Outline và giữ task context\nconst taskContext = $('Restore Outline Context').first().json;\nconst outlineData = $input.first().json.output;\n\nlet formattedOutline = '';\nfor (const section of outlineData.outline) {\n  formattedOutline += `H2: ${section.heading2}\\n`;\n  if (Array.isArray(section.subheadings)) {\n    for (const sub of section.subheadings) {\n      formattedOutline += `    H3: ${sub.heading3}\\n`;\n    }\n  }\n  formattedOutline += '\\n';\n}\nformattedOutline = formattedOutline.trim();\n\nreturn [{\n  json: {\n    ID: taskContext.ID,\n    row_number: taskContext.row_number,\n    Keyword: taskContext.Keyword,\n    Status: 'PROCESSING',\n    Title: outlineData.title,\n    Meta_Description: outlineData.meta_description,\n    meta_description: outlineData.meta_description,\n    Slug: outlineData.slug,\n    Outline: JSON.stringify(outlineData.outline, null, 2),\n    formatted_outline: formattedOutline\n  }\n}];"
+      },
+      "id": "c1a001-0023",
+      "name": "Format Outline Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3880,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID"
+          ],
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "Outline": "={{ $json.Outline }}",
+            "Title": "={{ $json.Title }}",
+            "Meta_Description": "={{ $json.Meta_Description || $json.meta_description || $('Format Outline Result').first().json.Meta_Description }}",
+            "Status": "PROCESSING",
+            "Error_Message": ""
+          },
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Keyword",
+              "displayName": "Keyword",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Research_Result",
+              "displayName": "Research_Result",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Outline",
+              "displayName": "Outline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meta_Description",
+              "displayName": "Meta_Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Drive_URL",
+              "displayName": "Drive_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Error_Message",
+              "displayName": "Error_Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Created_At",
+              "displayName": "Created_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Completed_At",
+              "displayName": "Completed_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c1a001-0024",
+      "name": "Update Row: Save Outline",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4100,
+        120
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP E1: Khôi phục toàn bộ context ổn định cho Article Writer\nconst taskContext = $('Filter & Take First PENDING Task').first().json;\nconst researchNode = $('Format Research Result').first().json;\nconst outlineNode = $('Format Outline Result').first().json;\n\nconst rawResearch = researchNode.Research_Result || '';\nlet researchObj = {};\ntry {\n  researchObj = typeof rawResearch === 'string' ? JSON.parse(rawResearch) : rawResearch;\n} catch (e) {\n  researchObj = {};\n}\n\nconst keyword = String(taskContext.Keyword || '').trim();\nconst title = String(outlineNode.Title || '').trim();\nconst formattedOutline = String(outlineNode.formatted_outline || '').trim();\nconst searchIntent = String(researchObj.search_intent || '').trim();\n\nif (!keyword) {\n  throw new Error('Restore Article Context: Missing Keyword');\n}\nif (!title) {\n  throw new Error('Restore Article Context: Missing Title');\n}\nif (!formattedOutline) {\n  throw new Error('Restore Article Context: Missing formatted_outline');\n}\nif (!searchIntent) {\n  throw new Error('Restore Article Context: Missing search_intent');\n}\n\nreturn [{\n  json: {\n    ID: taskContext.ID,\n    row_number: taskContext.row_number,\n    Keyword: keyword,\n    Status: 'PROCESSING',\n    Title: title,\n    Meta_Description: String(outlineNode.Meta_Description || outlineNode.meta_description || '').trim(),\n    Slug: String(outlineNode.Slug || outlineNode.slug || '').trim(),\n    Outline: outlineNode.Outline,\n    formatted_outline: formattedOutline,\n    Research_Result: rawResearch,\n    search_intent: searchIntent,\n    brand_context: String(researchObj.brand_context || '').trim(),\n    related_keywords: Array.isArray(researchObj.related_keywords) ? researchObj.related_keywords : [],\n    analysis_summary: String(researchObj.analysis_summary || '').trim(),\n    research_mode: String(researchObj.research_mode || '').trim(),\n    sources_used: Array.isArray(researchObj.sources_used) ? researchObj.sources_used : []\n  }\n}];"
+      },
+      "id": "c1a001-0025",
+      "name": "Restore Article Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4320,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là Senior SEO Content Writer.\n\nNhiệm vụ:\nViết bài blog tiếng Việt hoàn chỉnh dựa trực tiếp trên Research và Outline được cung cấp.\n\nINPUT:\n\nKeyword:\n{{ $json.Keyword }}\n\nTitle:\n{{ $json.Title }}\n\nMeta Description:\n{{ $json.Meta_Description }}\n\nSearch Intent:\n{{ $json.search_intent }}\n\nBrand Context:\n{{ $json.brand_context }}\n\nRelated Keywords:\n{{ JSON.stringify($json.related_keywords) }}\n\nAnalysis Summary:\n{{ $json.analysis_summary }}\n\nResearch Mode:\n{{ $json.research_mode }}\n\nSources Used:\n{{ JSON.stringify($json.sources_used) }}\n\nOUTLINE BẮT BUỘC:\n{{ $json.formatted_outline }}\n\n========================\nFACTUAL SAFETY\n========================\n\nPhân biệt:\n\n1. GENERAL INDUSTRY CONTENT\nKiến thức chung về Digital Marketing được phép giải thích ở mức chuyên môn tổng quát.\n\n2. WIFIM FACTUAL CONTENT\nChỉ được khẳng định thông tin cụ thể về WIFIM khi Brand Context hỗ trợ trực tiếp.\n\nNếu research_mode = LLM_INFERENCE_ONLY:\n- Không tạo factual claim về WIFIM.\n- Không giả vờ đã đọc website.\n- Không giả vờ có case study.\n- Không giả vờ có dữ liệu SERP.\n\nNếu research_mode = SOURCE_PLUS_LLM_INFERENCE:\n- Chỉ sử dụng factual information có trong Brand Context.\n- Không mở rộng factual claim ngoài Brand Context.\n\nTUYỆT ĐỐI KHÔNG BỊA:\n- doanh thu\n- ROI\n- phần trăm tăng trưởng\n- số khách hàng\n- case study\n- testimonial\n- KPI\n- giải thưởng\n- chứng nhận\n- ranking\n- Google SERP\n- People Also Ask\n- competitor result\n\nKhông viết các claim mạnh như:\ncam kết\nđảm bảo\nchắc chắn\nsố 1\ntốt nhất\nduy nhất\nnếu source không hỗ trợ trực tiếp.\n\n========================\nARTICLE RULES\n========================\n\n1. H1\nDùng Title đã cung cấp.\n\n2. Sapo\n- 3-5 câu\n- keyword xuất hiện tự nhiên\n- giới thiệu đúng vấn đề\n- không phóng đại.\n\n3. Tuân thủ outline\nKhông tự ý đổi logic lớn của H2/H3.\n\n4. Mỗi H2:\n- có đoạn dẫn\n- giải thích đủ luận điểm\n- không chỉ liệt kê H3.\n\n5. Mỗi H3:\n- giải thích thực tế\n- có ngữ cảnh doanh nghiệp nếu phù hợp\n- không tự bịa số liệu.\n\n6. Readability:\n- đoạn 2-4 câu\n- câu tương đối ngắn\n- dùng bullet list khi phù hợp\n- tránh lan man\n- tránh sáo rỗng.\n\n7. SEO:\n- dùng keyword chính tự nhiên\n- dùng related keywords khi phù hợp\n- không nhồi keyword.\n\n8. Tone:\n- chuyên nghiệp\n- dễ hiểu\n- thực tế\n- gọi độc giả là \"bạn\".\n\n9. CTA cuối:\nNếu có factual Brand Context về WIFIM thì có thể CTA nhẹ:\n\"Bạn có thể liên hệ WIFIM để tìm hiểu giải pháp phù hợp.\"\nKhông cam kết kết quả.\n\n========================\nOUTPUT HTML\n========================\n\nReturn ONLY HTML body content.\n\nAllowed:\n<h1>\n<h2>\n<h3>\n<p>\n<strong>\n<ul>\n<li>\n<ol>\n<table>\n<tr>\n<th>\n<td>\n\nKhông trả:\n<html>\n<head>\n<body>\nmarkdown\n```html\ntext giải thích ngoài HTML.\n\nBắt đầu trực tiếp:\n<h1>...</h1>",
+        "hasOutputParser": false
+      },
+      "id": "c1a001-0026",
+      "name": "AI Write Article",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        4540,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "c1a001-0027",
+      "name": "OpenAI Model (Article)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4540,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst taskContext = $('Restore Article Context').first().json;\n\nlet raw =\n  item.text ??\n  item.output ??\n  item.response ??\n  item;\n\nlet article = '';\nif (typeof raw === 'object' && raw !== null) {\n  article = String(raw.article ?? raw.content ?? raw.html ?? JSON.stringify(raw));\n} else {\n  article = String(raw ?? '');\n}\n\n// 1. Remove code fence if present\narticle = article.trim();\narticle = article\n  .replace(/^```(?:html)?\\s*/i, '')\n  .replace(/```\\s*$/i, '')\n  .trim();\n\n// Strip wrapper html/head/body tags if model wrapped them\narticle = article.replace(/<\\/?(?:html|head|body)[^>]*>/gi, '').trim();\n\n// 2. Validation\nif (!article) {\n  throw new Error('AI Write Article returned empty content');\n}\n\nif (article.length < 1500) {\n  throw new Error(`AI Write Article content too short: ${article.length} characters (minimum required 1500)`);\n}\n\nif (!/<h1\\b[^>]*>/i.test(article)) {\n  throw new Error('AI Write Article content missing <h1> heading');\n}\n\nconst h2Matches = article.match(/<h2\\b[^>]*>/gi);\nif (!h2Matches || h2Matches.length < 2) {\n  throw new Error(`AI Write Article content must contain at least 2 <h2> headings (found ${h2Matches ? h2Matches.length : 0})`);\n}\n\nif (/```/.test(article)) {\n  throw new Error('AI Write Article content contains unclosed markdown code fences (```)');\n}\n\nif (/As an AI\\b/i.test(article)) {\n  throw new Error('AI Write Article contains forbidden AI disclaimer phrase (\"As an AI\")');\n}\n\nif (/T\\u00f4i kh\\u00f4ng th\\u1ec3/i.test(article)) {\n  throw new Error('AI Write Article contains refusal phrase (\"Tôi không thể\")');\n}\n\n// 3. QA Warnings (for logging/debug, not blocking)\nconst qaWarnings = [];\nconst checkPhrases = ['cam k\\u1ebft', '\\u0111\\u1ea3m b\\u1ea3o', 's\\u1ed1 1', 't\\u1ed1t nh\\u1ea5t', 'duy nh\\u1ea5t'];\nfor (const phrase of checkPhrases) {\n  const reg = new RegExp(phrase, 'gi');\n  const count = (article.match(reg) || []).length;\n  if (count > 0) {\n    qaWarnings.push(`Found phrase \"${phrase}\" ${count} time(s)`);\n  }\n}\n\nreturn [{\n  json: {\n    ID: taskContext.ID,\n    row_number: taskContext.row_number,\n    Keyword: taskContext.Keyword,\n    Status: 'PROCESSING',\n    Title: taskContext.Title,\n    Meta_Description: taskContext.Meta_Description,\n    Slug: taskContext.Slug,\n    Article_HTML: article,\n    article_length: article.length,\n    qa_warnings: qaWarnings\n  }\n}];"
+      },
+      "id": "c1a001-0028",
+      "name": "Validate Article HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4760,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $json.ID }} - {{ $json.Slug }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.root_drive_folder_id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "c1a001-0029",
+      "name": "Create Article Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4980,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP F2: Chuẩn bị nội dung file HTML và tạo binary upload\nconst articleData = $('Validate Article HTML').first().json;\nconst folderData = $input.first().json;\nconst folderId = folderData.id || folderData.folder_id || '';\n\nconst metaDescHtml = articleData.Meta_Description \n  ? `<p><strong>Meta Description:</strong> ${articleData.Meta_Description}</p>\\n`\n  : '';\nconst fullHtml = `${metaDescHtml}${articleData.Article_HTML}`;\nconst fileName = `${articleData.Slug || 'bai-viet'}.html`;\n\nreturn [{\n  json: {\n    ID: articleData.ID,\n    row_number: articleData.row_number,\n    Keyword: articleData.Keyword,\n    Status: 'PROCESSING',\n    Title: articleData.Title,\n    Meta_Description: articleData.Meta_Description,\n    Slug: articleData.Slug,\n    folder_id: folderId,\n    file_name: fileName\n  },\n  binary: {\n    data: {\n      data: Buffer.from(fullHtml, 'utf-8').toString('base64'),\n      mimeType: 'text/html',\n      fileName: fileName\n    }\n  }\n}];"
+      },
+      "id": "c1a001-0030",
+      "name": "Prepare Article File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5200,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.Title }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $json.folder_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "propertiesUi": {
+            "propertyValues": [
+              {
+                "key": "mimeType",
+                "value": "application/vnd.google-apps.document"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c1a001-0031",
+      "name": "Upload Article to Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        5420,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// STEP F4: Trích xuất Drive URL và tạo timestamp hoàn tất\nconst taskContext = $('Validate Article HTML').first().json;\nconst fileData = $input.first().json;\nconst fileId = fileData.id || '';\n\nlet driveUrl = '';\nif (fileData.webViewLink) {\n  driveUrl = fileData.webViewLink;\n} else if (fileId) {\n  driveUrl = `https://drive.google.com/open?id=${fileId}`;\n}\n\nconst folderData = $('Create Article Folder').first().json;\nconst folderId = folderData.id || '';\nconst folderUrl = folderData.webViewLink || (folderId ? `https://drive.google.com/drive/folders/${folderId}` : '');\n\n// Timestamp Asia/Ho_Chi_Minh (GMT+7)\nconst now = new Date();\nconst offsetMs = 7 * 60 * 60 * 1000;\nconst localTime = new Date(now.getTime() + offsetMs);\nconst completedAt = localTime.toISOString().replace('T', ' ').substring(0, 19);\n\nreturn [{\n  json: {\n    ID: taskContext.ID,\n    row_number: taskContext.row_number,\n    Keyword: taskContext.Keyword,\n    Status: 'DONE',\n    Drive_URL: driveUrl,\n    Drive_Folder_URL: folderUrl,\n    Completed_At: completedAt,\n    Error_Message: ''\n  }\n}];"
+      },
+      "id": "c1a001-0032",
+      "name": "Build Drive URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5640,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Workflow Config').item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID"
+          ],
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "Drive_URL": "={{ $json.Drive_URL }}",
+            "Status": "DONE",
+            "Error_Message": "",
+            "Completed_At": "={{ $json.Completed_At }}"
+          },
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Keyword",
+              "displayName": "Keyword",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Research_Result",
+              "displayName": "Research_Result",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Outline",
+              "displayName": "Outline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Meta_Description",
+              "displayName": "Meta_Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Drive_URL",
+              "displayName": "Drive_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error_Message",
+              "displayName": "Error_Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Created_At",
+              "displayName": "Created_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Completed_At",
+              "displayName": "Completed_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c1a001-0033",
+      "name": "Update Row: DONE",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        5860,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "When clicking ‘Test step’": {
+      "main": [
+        [
+          {
+            "node": "Workflow Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Config": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Read Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Read Rows": {
+      "main": [
+        [
+          {
+            "node": "Filter & Take First PENDING Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter & Take First PENDING Task": {
+      "main": [
+        [
+          {
+            "node": "Check ID Not Empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check ID Not Empty": {
+      "main": [
+        [
+          {
+            "node": "Check Keyword Not Empty",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Row: ERROR (ID Empty)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Keyword Not Empty": {
+      "main": [
+        [
+          {
+            "node": "Update Row: PROCESSING",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Row: ERROR (Keyword Empty)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row: PROCESSING": {
+      "main": [
+        [
+          {
+            "node": "Restore Task Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Task Context": {
+      "main": [
+        [
+          {
+            "node": "Fetch WIFIM Source URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch WIFIM Source URL": {
+      "main": [
+        [
+          {
+            "node": "Clean Source Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Source Data": {
+      "main": [
+        [
+          {
+            "node": "AI Research Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model (Research)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Research Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Research Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Research JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Research JSON": {
+      "main": [
+        [
+          {
+            "node": "Format Research Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Research Result": {
+      "main": [
+        [
+          {
+            "node": "Update Row: Save Research Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row: Save Research Result": {
+      "main": [
+        [
+          {
+            "node": "Restore Outline Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Outline Context": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model (Outline)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Generate Outline",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Outline": {
+      "main": [
+        [
+          {
+            "node": "Parse Outline JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Outline JSON": {
+      "main": [
+        [
+          {
+            "node": "Format Outline Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Outline Result": {
+      "main": [
+        [
+          {
+            "node": "Update Row: Save Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row: Save Outline": {
+      "main": [
+        [
+          {
+            "node": "Restore Article Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Article Context": {
+      "main": [
+        [
+          {
+            "node": "AI Write Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model (Article)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Write Article",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Write Article": {
+      "main": [
+        [
+          {
+            "node": "Validate Article HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Article HTML": {
+      "main": [
+        [
+          {
+            "node": "Create Article Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Article Folder": {
+      "main": [
+        [
+          {
+            "node": "Prepare Article File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Article File": {
+      "main": [
+        [
+          {
+            "node": "Upload Article to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Article to Drive": {
+      "main": [
+        [
+          {
+            "node": "Build Drive URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Drive URL": {
+      "main": [
+        [
+          {
+            "node": "Update Row: DONE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

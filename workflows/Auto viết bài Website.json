@@ -1,0 +1,669 @@
+{
+  "name": "Auto viết bài Website",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const htmlContent = $('Thông tin viết bài1').first().json.output.description \n+ $('Viết bài1').first().json.text; // Đảm bảo biến 'text' khớp với output của node AI\nconst fileName = $input.item.json.output_fileName || 'Bai-viet.html';\n\nreturn {\n  json: $input.item.json,\n  binary: {\n    data: {\n      data: Buffer.from(htmlContent).toString('base64'),\n      mimeType: 'text/html',\n      fileName: fileName\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2928,
+        608
+      ],
+      "id": "fb5fd0a6-9f4f-410a-bc55-65a1a219bb60",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Lấy từ khóa và outline1').item.json['Từ khóa'] }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Create folder1').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "propertiesUi": {
+            "propertyValues": [
+              {
+                "key": "mimeType",
+                "value": "application/vnd.google-apps.document"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2704,
+        608
+      ],
+      "id": "0e525e12-cc27-4f65-8fe8-1bbab49fc838",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "yiQht7O5flORxxQE",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là một Content Writer Bậc Thầy (Master Content Writer). Chuyên môn của bạn là biến một dàn ý (outline) chuẩn SEO khô khan thành một bài viết blog chuyên sâu, lôi cuốn, và khách quan.\nVăn phong của bạn là sự kết hợp hoàn hảo giữa chuyên gia và người chia sẻ thông tin đáng tin cậy.\n\nTHÔNG TIN ĐẦU VÀO:\n- Từ khóa chính: {{ $('Lấy từ khóa và outline1').item.json['Từ khóa'] }}\n- Tiêu đề bài viết (để lấy ý): {{ $json.output.title }}\n- Từ khóa liên quan: {{ $json.output.relatedkeywords }}\n- URL tham khảo: {{ $json.output.websitereference }}\n- Dàn ý (Outline) Bắt Buộc: {{ $json.output.formattedOutline }}\n- Bối cảnh (Context): {{ $('Research1').item.json.output.competitor_analysis }}\n- Ý định Tìm kiếm (Guiding Intent): {{ $('Research1').item.json.output.search_intent }}\n\nNHIỆM VỤ: Viết một bài viết blog hoàn chỉnh, bao gồm Sapo và nội dung chi tiết cho dàn ý.\n\n[RÀNG BUỘC QUAN TRỌNG VỀ TỪ NGỮ]: Tuyệt đối không sử dụng các từ ngữ phóng đại, cam kết tuyệt đối hoặc gây hiểu lầm như \"tốt nhất\", \"số 1\", \"duy nhất\", v.v. trong toàn bộ nội dung bài viết.\n\nQUY TẮC VIẾT (TUYỆT ĐỐI TUÂN THỦ):\n0. Nguyên tắc Chỉ đạo (Guiding Principle): Toàn bộ nội dung bài viết, từ Sapo đến kết luận, phải được viết để phục vụ triệt để \"Ý định Tìm kiếm\" (Guiding Intent) đã được cung cấp.\n\n1. Về Sapo (Mở đầu):\n- Viết 1 đoạn Sapo (mở đầu) duy nhất, hấp dẫn và lôi cuốn, dựa trên \"Bối cảnh (Context)\".\n- Độ dài lý tưởng: Khoảng 3-5 câu (tương đương 50-80 từ).\n- Phải chứa Từ khóa chính một cách tự nhiên (ưu tiên ở những câu đầu).\n- Giới thiệu rõ ràng vấn đề và hứa hẹn giải pháp/lợi ích mà bài viết sẽ mang lại.\n\n2. Về Nội dung Thân bài (Quy tắc cốt lõi):\n- Dòng chảy H2/H3: Nội dung content của mỗi heading (H2) phải là một luận điểm thống nhất. Các H3 con chính là các luận điểm phụ hoặc các bước hướng dẫn phải được làm rõ bên trong nội dung đó. Hãy dùng H3 làm kim chỉ nam để phát triển nội dung, đảm bảo dòng chảy logic, chứ không phải liệt kê các H3 ra.\n- Độ sâu và Nguyên bản: Đảm bảo nội dung cung cấp giá trị thực sự, chuyên sâu, và nguyên bản 100% (100% unique). Ưu tiên chất lượng hơn số lượng. Với các H2 chính (mang nội dung cốt lõi), hãy viết sâu (200-500 từ). Với các H2 phụ (ví dụ: kết luận), hãy viết súc tích và vừa đủ ý.\n- Tối ưu SEO (On-page): Sử dụng Từ khóa chính trong Sapo và ít nhất một H2. Rải đều các Từ khóa liên quan vào các H2 và H3 một cách tự nhiên nhất có thể. KHÔNG BAO GIỜ nhồi nhét từ khóa.\n3. Về Văn phong và Độ dễ đọc (bắt buộc):\n- Xưng hô: Luôn xưng hô là chúng tôi và gọi độc giả là bạn.\n- Gần gũi và thực tế: đặt câu hỏi tương tác nhẹ nhàng với người đọc nhưng không bị sến.\n- Độ dễ đọc (Readability): Viết cho người đọc, không phải cho máy móc.\n- Ưu tiên viết câu ngắn gọn, súc tích. Hạn chế viết câu quá 20 từ (giữ tỷ lệ câu dài dưới 25%). Nếu ý quá dài, hãy chủ động tách thành 2 câu đơn hoặc sử dụng dấu ngắt nghỉ hợp lý.\n- KHÔNG dùng từ sáo rỗng, hàn lâm, hoặc từ đệm dư thừa (như: Tóm lại, Theo đó, Do đó, Vì vậy, Nhìn chung...).\n- KHÔNG dùng dấu ngoặc kép (\"\"). Dùng in đậm để nhấn mạnh các ý quan trọng.\n- Sử dụng đoạn văn ngắn (tối đa 3-4 câu) và bullet points (danh sách liệt kê) để thông tin dễ tiếp thu.\n4. Về Kết bài (Bắt buộc):\n- Phần H2 cuối cùng (hoặc nội dung cuối cùng của H2 cuối cùng) phải là đoạn kết.\n- Đoạn kết phải thân thiện và có thể bao gồm tổng kết nội dung bài viết).\n\nYÊU CẦU ĐỊNH DẠNG ĐẦU RA (OUTPUT):\nHãy trả về nội dung dưới dạng mã HTML chuẩn (HTML Code).\n- Sử dụng thẻ <h1> cho Tiêu đề bài viết.\n- Sử dụng thẻ <h2> cho các Heading chính.\n- Sử dụng thẻ <h3> cho các Heading phụ.\n- Sử dụng thẻ <p> cho các đoạn văn.\n- Sử dụng thẻ <strong> hoặc <b> cho các từ khóa cần in đậm.\n- Sử dụng thẻ <ul> và <li> cho các danh sách liệt kê.\n- Sử dụng thẻ <table>,<tr> và <td> cho các bảng.\n- KHÔNG dùng thẻ <html>, <head>, <body> hay backticks (```html). Chỉ trả về nội dung phần thân bài viết bắt đầu từ thẻ <h1>.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Hiện tại là: {{ $now.setZone('Asia/Ho_Chi_Minh').format('cccc, dd/MM/yyyy HH:mm') }}"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -3536,
+        608
+      ],
+      "id": "6e5caf24-71c9-4502-82c9-d7ae951f7e91",
+      "name": "Viết bài1",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Chq1Tw14aIRNp1IiMKec-b3aXmekXNiSiD6u4sl1SCY",
+          "mode": "list",
+          "cachedResultName": "Auto Viết bài",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Chq1Tw14aIRNp1IiMKec-b3aXmekXNiSiD6u4sl1SCY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Không Outline",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Chq1Tw14aIRNp1IiMKec-b3aXmekXNiSiD6u4sl1SCY/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -5248,
+        624
+      ],
+      "id": "dc32d713-cceb-4c0d-a9eb-43e92132287b",
+      "name": "Lấy thông tin từ sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Md7jxJl3FdVUduMy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "520192e8-90f6-4c31-8a8d-1c24570de6c9",
+              "leftValue": "={{ $json.Driver }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "bfcbf80b-2c88-4e88-a57f-09ec9998bc97",
+              "leftValue": "={{ $('Webhook1').item.json.body.cell }}",
+              "rightValue": "=F{{ $json.row_number }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -5008,
+        624
+      ],
+      "id": "5b66be34-3a8a-44b3-9eb5-1cb11f35720b",
+      "name": "Điều kiện nếu có bài rồi thì không viết nữa1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "638fa818-88ec-4a84-9558-18aef38c3aee",
+              "name": "Từ khóa",
+              "value": "={{ $json['Từ khóa'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4784,
+        608
+      ],
+      "id": "cae24ff9-c66d-4131-961f-e0ad1eb61874",
+      "name": "Lấy từ khóa và outline1",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Lấy từ khóa và outline1').item.json['Từ khóa'] }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1WkLYkXB-Nc99TTbHP3Ld84-CfNFnDOqV",
+          "mode": "list",
+          "cachedResultName": "Bài viết WIFIM",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1WkLYkXB-Nc99TTbHP3Ld84-CfNFnDOqV"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -3152,
+        608
+      ],
+      "id": "a5ab872c-8f68-48fe-9873-dc847784d952",
+      "name": "Create folder1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "yiQht7O5flORxxQE",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Chq1Tw14aIRNp1IiMKec-b3aXmekXNiSiD6u4sl1SCY",
+          "mode": "list",
+          "cachedResultName": "Auto Viết bài",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Chq1Tw14aIRNp1IiMKec-b3aXmekXNiSiD6u4sl1SCY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Không Outline",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Chq1Tw14aIRNp1IiMKec-b3aXmekXNiSiD6u4sl1SCY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Từ khóa": "={{ $('Lấy từ khóa và outline1').item.json['Từ khóa'] }}",
+            "Driver": "=https://drive.google.com/drive/folders/{{ $('Create folder1').item.json.id }}"
+          },
+          "matchingColumns": [
+            "Từ khóa"
+          ],
+          "schema": [
+            {
+              "id": "STT",
+              "displayName": "STT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Từ khóa",
+              "displayName": "Từ khóa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Outline",
+              "displayName": "Outline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Driver",
+              "displayName": "Driver",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2464,
+        608
+      ],
+      "id": "064b8fec-91b7-4ffb-bae3-59d587e24c4f",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Md7jxJl3FdVUduMy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a6cb5f80-0426-47a0-8535-9c214d1f9b63",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -5504,
+        624
+      ],
+      "id": "d4f89985-4db1-4422-b79e-a31d6c4e48db",
+      "name": "Webhook1",
+      "webhookId": "a6cb5f80-0426-47a0-8535-9c214d1f9b63"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"title\": \"tiêu đề của bài viết\",\n  \"description\": \"Thẻ Meta Description\",\n  \"Outline\": [\n    {\n      \"heading2\": \"Tiêu đề H2 thứ nhất\",\n      \"subheadings\": [\n        { \"heading3\": \"Tiêu đề H3.1\" },\n        { \"heading3\": \"Tiêu đề H3.2\" }\n      ]\n    },\n    {\n      \"heading2\": \"Tiêu đề H2 thứ hai\",\n      \"subheadings\": [\n        { \"heading3\": \"Tiêu đề H3.1\" },\n        { \"heading3\": \"Tiêu đề H3.2\" },\n        { \"heading3\": \"Tiêu đề H3.3\" }\n      ]\n    },\n    {\n      \"heading2\": \"Tiêu đề H2 thứ ba (không có H3)\",\n      \"subheadings\": []\n    }\n  ],\n  \"slug\": \"từ khóa không dấu và cách nhau bằng dấu '-'\",\n  \"relatedkeywords\": \"Các từ khóa liên quan đến từ khóa chính\",\n  \"websitereference\": \"Các URL bài viết có thể tham khảo nội dung để viết bài\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -4064,
+        768
+      ],
+      "id": "cede8249-a7bc-4e4a-b967-75d7400809f7",
+      "name": "Định dạng lại Output1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là một Kiến trúc sư Nội dung (Content Architect) và chuyên gia SEO chiến lược. Nhiệm vụ của bạn là biến dữ liệu Phân tích SERP (đã được cung cấp) thành một cấu trúc bài viết (outline) hoàn hảo, logic và có chiến lược để chiến thắng đối thủ.\n\nTHÔNG TIN ĐẦU VÀO:\n1. Từ khóa chính: {{ $('Lấy từ khóa và outline1').item.json['Từ khóa'] }}\n2. Dữ liệu Phân tích SERP (Từ Node Research):\n- Tổng quan Research (Context): {{ $json.output.analysis_summary }}\n- Ý định Tìm kiếm: {{ $json.output.search_intent }}\n- Phân tích Đối thủ (Chủ đề con): {{ $json.output.competitor_analysis }}\n- Các câu hỏi liên quan (PAA): {{ $json.output.people_also_ask }}\n- Các URL Top đầu: {{ $json.output.top_urls }}\n- Các Từ khóa liên quan (đã research): {{ $json.output.related_keywords }}\n\nYÊU CẦU NHIỆM VỤ (Dựa trên dữ liệu đầu vào):\n[RÀNG BUỘC QUAN TRỌNG]: Tuyệt đối không sử dụng các từ ngữ phóng đại, cam kết hoặc gây hiểu lầm như \"tốt nhất\", \"số 1\", \"duy nhất\", v.v. trong toàn bộ nội dung (Title, Description, Headings).\n1. Tối ưu Tiêu đề và Mô tả (Title & Meta Description):\n- Title: Phải hấp dẫn, giải quyết triệt để \"Ý định Tìm kiếm\" (đã cung cấp), chứa từ khóa chính, và trong khoảng 55-60 ký tự.\n- Description: Phải tóm tắt lợi ích, khớp với \"Ý định Tìm kiếm\", chứa từ khóa, và có CTA nhẹ. Khoảng 150-160 ký tự. Description không được có dấu ngoặc kép.\n2. Xây dựng Dàn ý (Outline) Chiến lược:\n- Dàn ý H2/H3 phải được thiết kế để đáp ứng toàn diện \"Ý định Tìm kiếm\".\n- Phải bao quát tất cả các chủ đề quan trọng trong \"Phân tích Đối thủ\".\n- Phải lồng ghép và trả lời toàn bộ \"Các câu hỏi liên quan (PAA)\" vào các H2/H3 một cách logic.\n- Tạo dàn ý tự nhiên, logic, không thêm số thứ tự.\n- Phải có một H2 cuối cùng để tóm tắt (\"Kết luận\") hoặc kêu gọi hành động.\n3. Hoàn thiện Dữ liệu SEO:\n- relatedkeywords: Chọn lọc và trả về các từ khóa quan trọng nhất từ \"Các Từ khóa liên quan (đã research)\".\n- websitereference: Trả về chính xác danh sách \"Các URL Top đầu (đã cung cấp)\".\n- slug: Tạo slug từ Từ khóa chính.\n\nYÊU CẦU ĐỊNH DẠNG ĐẦU RA (OUTPUT): Hãy trả về kết quả chính xác theo cấu trúc JSON được yêu cầu trong \"Require Specific Output Format\" của bạn.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Hiện tại là: {{ $now.setZone('Asia/Ho_Chi_Minh').format('cccc, dd/MM/yyyy HH:mm') }}"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -4208,
+        608
+      ],
+      "id": "0104e647-335d-49a6-97a4-eaa0f08bd583",
+      "name": "Thông tin viết bài1",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"search_intent\": \"Viết kết quả phân tích ý định tìm kiếm chính vào đây.\",\n  \"competitor_analysis\": \"Viết tóm tắt các chủ đề con và luận điểm chính của đối thủ vào đây.\",\n  \"people_also_ask\": [\n    \"Câu hỏi liên quan thứ nhất\",\n    \"Câu hỏi liên quan thứ hai\"\n  ],\n  \"top_urls\": [\n    \"https://domain-doi-thu-1.com/bai-viet\",\n    \"https://domain-doi-thu-2.com/bai-viet\"\n  ],\n  \"related_keywords\": [\n    \"Từ khóa liên quan 1\",\n    \"Từ khóa liên quan 2\",\n    \"Từ khóa đuôi dài 1\"\n  ],\n  \"analysis_summary\": \"Viết một đoạn tóm tắt tổng thể về kết quả research (dùng để truyền vào node 'Lên Outline' sau này).\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -4416,
+        768
+      ],
+      "id": "41286650-5f39-4b55-ba17-c987857a023f",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là một chuyên gia SEO hàng đầu. Sử dụng công cụ Google Search để thực hiện phân tích SERP chi tiết cho từ khóa chính: \"{{ $json[\"Từ khóa\"] }}\"\n\nNHIỆM VỤ: Phân tích 5-7 kết quả tìm kiếm hàng đầu để thu thập các thông tin sau:\n1. Xác định Ý định Tìm kiếm (Search Intent): Xác định ý định chính (ví dụ: Thông tin, Hướng dẫn, So sánh, Thương mại).\n2. Phân tích Đối thủ (Competitor Analysis): Tóm tắt các chủ đề con (sub-topics) và luận điểm chính mà các bài viết top đầu đang đề cập.\n3. Thu thập Câu hỏi (People Also Ask): Liệt kê các câu hỏi liên quan \"Mọi người cũng hỏi\".\n4. Thu thập URL (Top URLs): Liệt kê 5-7 URL mà bạn đã phân tích.\n5. Trích xuất Từ khóa (Related Keywords): Trích xuất các từ khóa ngữ nghĩa (LSI) và từ khóa đuôi dài (long-tail) mà bạn thấy trong các tiêu đề và mô tả của đối thủ.\n6. Tổng hợp (Summary): Cung cấp một bản tóm tắt phân tích tổng thể (dùng để làm ngữ cảnh cho bước sau).\n\nYÊU CẦU ĐỊNH DẠNG ĐẦU RA (OUTPUT):\nHãy trả về kết quả chính xác theo cấu trúc JSON được yêu cầu trong \"Require Specific Output Format\" của bạn.\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Hiện tại là: {{ $now.setZone('Asia/Ho_Chi_Minh').format('cccc, dd/MM/yyyy HH:mm') }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -4560,
+        608
+      ],
+      "id": "9b28df1a-c0b8-47e8-ab7e-4b30612867d6",
+      "name": "Research1",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy toàn bộ đối tượng item từ node trước\nconst item = items[0].json;\n\n// Lấy mảng 'Outline' từ bên trong key 'output'\nconst outlineArray = item.output.Outline;\n\n// --- 1. Tạo chuỗi văn bản 'formattedOutline' ---\n// (Phần này giữ nguyên, nó vẫn sẽ bao gồm H2 cuối cùng)\nconst formattedText = outlineArray.map(h2_item => {\n    \n    // Lấy tiêu đề H2\n    let h2_block = \"H2: \" + h2_item.heading2;\n    \n    // Lấy các tiêu đề H3 con (nếu có)\n    let h3_lines = \"\";\n    if (h2_item.subheadings && h2_item.subheadings.length > 0) {\n        \n        h3_lines = h2_item.subheadings.map(h3_item => \n            \"    H3: \" + h3_item.heading3\n        ).join('\\n');\n    }\n    \n    // Kết hợp H2 và H3\n    if (h3_lines) {\n        return h2_block + '\\n' + h3_lines;\n    }\n    return h2_block; \n\n}).join('\\n\\n');\n\n// --- 2. TẠO MẢNG CHỈ CÓ HEADING 2 (BỎ CÁI CUỐI CÙNG) ---\n// Thêm .slice(0, -1) ở cuối dòng này\nconst h2List = outlineArray.map(h2_item => h2_item.heading2).slice(0, -1);\n\n// --- 3. Thêm cả hai trường mới vào 'output' ---\nitem.output.formattedOutline = formattedText;\nitem.output.h2List = h2List; // <-- Dòng này tạo ra mảng H2 đã bỏ H2 cuối\n\n// Trả về TOÀN BỘ đối tượng 'item' (đã được cập nhật)\nreturn item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3808,
+        608
+      ],
+      "id": "4a20808d-42f6-4ef0-8e17-a5338c666415",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        -4560,
+        768
+      ],
+      "id": "1b5497de-2ca7-4190-b4cd-66a60eb7cf64",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "KdD2WP1F9heKxqau",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        -4208,
+        768
+      ],
+      "id": "707a5078-f6a5-467f-95b2-e0ff09886fea",
+      "name": "DeepSeek Chat Model1",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "KdD2WP1F9heKxqau",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        -3536,
+        784
+      ],
+      "id": "71ce8f27-073f-4c8c-a27f-9bf32c01b251",
+      "name": "DeepSeek Chat Model2",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "KdD2WP1F9heKxqau",
+          "name": "DeepSeek account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Viết bài1": {
+      "main": [
+        [
+          {
+            "node": "Create folder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy thông tin từ sheet1": {
+      "main": [
+        [
+          {
+            "node": "Điều kiện nếu có bài rồi thì không viết nữa1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Điều kiện nếu có bài rồi thì không viết nữa1": {
+      "main": [
+        [
+          {
+            "node": "Lấy từ khóa và outline1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy từ khóa và outline1": {
+      "main": [
+        [
+          {
+            "node": "Research1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create folder1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Lấy thông tin từ sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Định dạng lại Output1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Thông tin viết bài1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thông tin viết bài1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Research1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research1": {
+      "main": [
+        [
+          {
+            "node": "Thông tin viết bài1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Viết bài1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Research1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Thông tin viết bài1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Viết bài1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "66e9f67f-fc14-4e35-a799-eaf0a0ba8eb4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7334a5f45b8eecee4939ec5cc7d56e78f29270603d814e474610bee7d2915fa6"
+  },
+  "id": "zlpJKGHlS37Tpdrg",
+  "tags": []
+}

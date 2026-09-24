@@ -1,0 +1,152 @@
+{
+  "name": "WIFIM - 01 - AI Content Minimal Test",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e7b1a201-1111-4000-8000-000000000001",
+      "name": "When clicking ‘Test step’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c76a1b2d-1111-4000-8000-000000000001",
+              "name": "keyword",
+              "value": "Dịch vụ Digital Marketing cho doanh nghiệp",
+              "type": "string"
+            },
+            {
+              "id": "c76a1b2d-1111-4000-8000-000000000002",
+              "name": "language",
+              "value": "vi",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e7b1a201-1111-4000-8000-000000000002",
+      "name": "Set Initial Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Keyword:\n{{ $json.keyword }}\n\nHãy tạo một bài viết thử nghiệm gồm:\n1. Title\n2. Meta Description\n3. Introduction\n4. 3-4 H2\n5. Có thể có H3 nếu cần\n6. Conclusion\n\nĐộ dài khoảng 700-1000 từ.\n\nTrả về kết quả dưới định dạng JSON duy nhất như sau (không kèm lời dẫn ngoài JSON):\n{\n  \"title\": \"Tiêu đề bài viết\",\n  \"meta_description\": \"Mô tả ngắn gọn chuẩn SEO\",\n  \"content\": \"Toàn bộ nội dung bài viết hoàn chỉnh dạng markdown có chứa Intro, các H2, H3, Conclusion\"\n}",
+        "hasOutputParser": false,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "Bạn là Content Writer chuyên viết nội dung website doanh nghiệp bằng tiếng Việt.\n\nYêu cầu:\n- Viết rõ ràng, chuyên nghiệp.\n- Không tự bịa số liệu.\n- Không tự bịa thông tin riêng về WIFIM.\n- Nếu input không cung cấp thông tin doanh nghiệp cụ thể thì viết ở mức nội dung tổng quát.\n- Sử dụng heading H2/H3 rõ ràng.\n- Không thêm thông tin giả để làm bài viết có vẻ thuyết phục hơn."
+            }
+          ]
+        }
+      },
+      "id": "e7b1a201-1111-4000-8000-000000000003",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "e7b1a201-1111-4000-8000-000000000004",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawResponse = $input.first().json.text || '';\nconst initialInput = $('Set Initial Input').first().json;\nconst keyword = initialInput.keyword || '';\n\nlet parsedData = null;\n\ntry {\n  let cleanText = rawResponse.trim();\n  if (cleanText.startsWith('```json')) {\n    cleanText = cleanText.replace(/^```json\\s*/, '').replace(/```\\s*$/, '');\n  } else if (cleanText.startsWith('```')) {\n    cleanText = cleanText.replace(/^```\\s*/, '').replace(/```\\s*$/, '');\n  }\n  parsedData = JSON.parse(cleanText);\n} catch (e) {\n  const jsonMatch = rawResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsedData = JSON.parse(jsonMatch[0]);\n    } catch (err) {\n      parsedData = null;\n    }\n  }\n}\n\nlet title = '';\nlet meta_description = '';\nlet content = '';\n\nif (parsedData && typeof parsedData === 'object') {\n  title = parsedData.title || '';\n  meta_description = parsedData.meta_description || '';\n  content = parsedData.content || '';\n}\n\n// Fallback nếu model trả text không parse được JSON\nif (!title) {\n  const titleMatch = rawResponse.match(/(?:^#\\s*|Title:\\s*)([^\\n]+)/i);\n  title = titleMatch ? titleMatch[1].trim() : `${keyword} - Giải pháp toàn diện cho doanh nghiệp`;\n}\nif (!meta_description) {\n  const metaMatch = rawResponse.match(/(?:Meta Description:\\s*)([^\\n]+)/i);\n  meta_description = metaMatch ? metaMatch[1].trim() : `Tổng quan kiến thức và chiến lược về ${keyword}.`;\n}\nif (!content) {\n  content = rawResponse;\n}\n\nreturn [{\n  json: {\n    keyword: keyword,\n    title: title,\n    meta_description: meta_description,\n    content: content,\n    generated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "e7b1a201-1111-4000-8000-000000000005",
+      "name": "Normalize Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "When clicking ‘Test step’": {
+      "main": [
+        [
+          {
+            "node": "Set Initial Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Initial Input": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

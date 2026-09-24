@@ -1,0 +1,1044 @@
+{
+  "name": "toshibathienbang.com",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Thay 'driveUrl' bằng tên cột trong Google Sheet của bạn\nconst driveUrl = $input.first().json.Drive;\nconst match = driveUrl.match(/folders\\/([a-zA-Z0-9-_]+)/);\n\nif (match && match[1]) {\n  return { folderId: match[1] };\n}\nthrow new Error('Không thể tìm thấy Folder ID trong URL.');"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        192
+      ],
+      "id": "809d29d8-12f7-44e8-92d3-cd882b0fb29a",
+      "name": "Extract Folder ID"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1xrTj7qGXqoPahPKW1JhjfVtsAGtiG_qbDaAAKtbJRsg",
+          "mode": "list",
+          "cachedResultName": "Wifim auto đăng bài SEO Content Wordpress",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xrTj7qGXqoPahPKW1JhjfVtsAGtiG_qbDaAAKtbJRsg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2071286417,
+          "mode": "list",
+          "cachedResultName": "toshibathienbang.com",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xrTj7qGXqoPahPKW1JhjfVtsAGtiG_qbDaAAKtbJRsg/edit#gid=2071286417"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1824,
+        208
+      ],
+      "id": "b1cdf082-9890-4b6b-aa38-2be3bcdd4021",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Md7jxJl3FdVUduMy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allFiles = $items('List All Files').map(item => item.json);\nlet googleDoc = null;\nconst imageFiles = [];\n\nfor (const file of allFiles) {\n  if (file.mimeType === 'application/vnd.google-apps.document') {\n    googleDoc = file;\n  } else if (file.mimeType.startsWith('image/')) {\n    imageFiles.push(file);\n  }\n}\n\nif (!googleDoc) throw new Error('Không tìm thấy file Google Docs.');\n\nreturn { googleDoc, imageFiles };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        192
+      ],
+      "id": "5796f951-2f9d-4537-8866-635f3738b6c9",
+      "name": "Categorize Files"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "='{{ $('Extract Folder ID').item.json.folderId }}' in parents",
+        "returnAll": true,
+        "filter": {},
+        "options": {
+          "fields": [
+            "mimeType",
+            "id",
+            "name"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -912,
+        192
+      ],
+      "id": "220bb783-7f11-400e-b82e-fa8d0e532658",
+      "name": "List All Files",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "yiQht7O5flORxxQE",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Categorize Files').item.json.googleDoc.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "data",
+          "googleFileConversion": {
+            "conversion": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -304,
+        192
+      ],
+      "id": "b4c930e5-5cfe-48bb-9f8f-94d729f07862",
+      "name": "GetHTMLContent",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "yiQht7O5flORxxQE",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allImageFiles = $('Categorize Files').item.json.imageFiles;\n\nconst extractNumber = (fileName) => {\n  const match = fileName.match(/(\\d+)\\.\\w+$/);\n  return match ? parseInt(match[1], 10) : 0;\n};\n\nallImageFiles.sort((a, b) => {\n  return extractNumber(a.name) - extractNumber(b.name);\n});\n\nreturn allImageFiles;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "754d1471-4ea7-46e2-81c5-3e437cff22fe",
+      "name": "Sort Images"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        784,
+        176
+      ],
+      "id": "872d7694-8990-46e7-a9f6-41503b8753d8",
+      "name": "Loop Through Images"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1104,
+        192
+      ],
+      "id": "c077a94a-4236-4118-833a-0de8b15d5ba5",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "yiQht7O5flORxxQE",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://toshibathienbang.com/wp-json/wp/v2/media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "={{ $binary.data.mimeType }}"
+            },
+            {
+              "name": "content-disposition",
+              "value": "=attachment; filename=\"{{ $binary.data.fileName}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1376,
+        192
+      ],
+      "id": "40905ff2-445e-410e-a968-2143f504d9ae",
+      "name": "WordPress Media Upload",
+      "credentials": {
+        "wordpressApi": {
+          "id": "LeiivwP5nJAsbJrO",
+          "name": "Wordpress account toshibathienbang.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "binary",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "caption",
+              "cssSelector": "p span[style*=\"font-style:italic\"]",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        192
+      ],
+      "id": "f6f22e08-c80b-4eca-a293-cfb0bca78454",
+      "name": "Extract Image Data",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "'use strict';\n\n// Lấy dữ liệu (ép thành string an toàn)\nconst rawInput = $input.first().json || {};\nlet fullContent = Array.isArray(rawInput.fullContent) ? rawInput.fullContent.join(' ') : String(rawInput.fullContent || '');\nlet title = String(rawInput.title || '');\nlet metaDescription = String(rawInput.metaDescription || '');\n\n// 0. (Tuỳ chọn) xóa thuộc tính style/id\nfullContent = fullContent.replace(/\\s*(?:style|id)=[\"'][^\"']*[\"']/gi, '');\n\n// Helpers\nfunction escapeRegexChar(ch) {\n  return ch.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&');\n}\nfunction normalizeText(str) {\n  return String(str || '').replace(/\\s+/g, ' ').trim();\n}\nfunction stripHTMLTags(html) {\n  return String(html || '').replace(/<[^>]*>/g, '');\n}\n\n// Regex linh hoạt cho title/meta\nfunction createFlexibleRegexChars(text) {\n  if (!text) return null;\n  const parts = [];\n  let i = 0;\n  while (i < text.length) {\n    const ch = text[i];\n    if (/\\s/.test(ch)) {\n      while (i < text.length && /\\s/.test(text[i])) i++;\n      parts.push('(?:\\\\s|<[^>]+>)+');\n    } else {\n      parts.push(escapeRegexChar(ch) + '(?:\\\\s|<[^>]+>)*');\n      i++;\n    }\n  }\n  return new RegExp(parts.join(''), 'is');\n}\n\n// Plain forms để so sánh\nconst plainTitleNorm = normalizeText(stripHTMLTags(title));\nconst plainMetaNorm = normalizeText(stripHTMLTags(metaDescription));\n\n// 1. Tách fullContent thành các block\nconst blockRegex = /<(p|h[1-6]|div|section|article|figure|li|blockquote)[^>]*>[\\s\\S]*?<\\/\\1>/gi;\nlet blocks = [];\nlet lastIndex = 0;\nlet m;\nwhile ((m = blockRegex.exec(fullContent)) !== null) {\n  const idx = m.index;\n  if (idx > lastIndex) {\n    blocks.push({ tag: 'raw', html: fullContent.slice(lastIndex, idx) });\n  }\n  blocks.push({ tag: m[1].toLowerCase(), html: m[0] });\n  lastIndex = blockRegex.lastIndex;\n}\nif (lastIndex < fullContent.length) {\n  blocks.push({ tag: 'raw', html: fullContent.slice(lastIndex) });\n}\n\n// 2. Đánh dấu block cần xóa\nconst removeIdx = new Set();\nfunction blockPlainText(blockHtml) {\n  return normalizeText(stripHTMLTags(blockHtml));\n}\nconst titleRegexFlexible = title ? createFlexibleRegexChars(title) : null;\nconst metaRegexFlexible = metaDescription ? createFlexibleRegexChars(metaDescription) : null;\n\nfor (let i = 0; i < blocks.length; i++) {\n  const b = blocks[i];\n  if (!b || !b.html) continue;\n\n  try {\n    if (title && titleRegexFlexible && titleRegexFlexible.test(b.html)) {\n      removeIdx.add(i);\n      continue;\n    }\n    if (metaDescription && metaRegexFlexible && metaRegexFlexible.test(b.html)) {\n      removeIdx.add(i);\n      continue;\n    }\n  } catch (e) {}\n\n  const plain = blockPlainText(b.html);\n  if (plainTitleNorm && plain.includes(plainTitleNorm)) {\n    removeIdx.add(i);\n    continue;\n  }\n  if (plainMetaNorm && plain.includes(plainMetaNorm)) {\n    removeIdx.add(i);\n    continue;\n  }\n}\n\n// 3. Xóa caption ngay sau ảnh (phiên bản tối ưu)\nconst CAPTION_MAX_LEN = 150;\nfor (let i = 0; i < blocks.length; i++) {\n  if (removeIdx.has(i)) continue;\n  const b = blocks[i];\n  if (!b || !b.html) continue;\n\n  // Chỉ xử lý các block có chứa thẻ <img>\n  if (/<img[^>]*>/i.test(b.html)) {\n    // BƯỚC 3.1: Xử lý caption NẰM TRONG CÙNG BLOCK với ảnh\n    // Tìm nội dung sau thẻ <img> và kiểm tra xem có phải caption không\n    const originalHtml = b.html;\n    const newHtml = originalHtml.replace(/(<img[^>]*>)([\\s\\S]*)/i, (match, imgTag, followingContent) => {\n      const plainFollowing = blockPlainText(followingContent);\n      // Nếu nội dung phía sau có độ dài phù hợp -> coi là caption và loại bỏ\n      if (plainFollowing.length > 0 && plainFollowing.length <= CAPTION_MAX_LEN) {\n        return imgTag; // Chỉ giữ lại thẻ <img>\n      }\n      // Nếu không, giữ lại nội dung gốc\n      return match;\n    });\n    // Cập nhật lại HTML của block nếu có thay đổi\n    blocks[i].html = newHtml;\n\n    // BƯỚC 3.2: Xử lý caption nằm ở block KẾ TIẾP (logic cũ)\n    // Vẫn giữ logic này để xử lý trường hợp caption nằm trong thẻ <p> riêng biệt\n    let j = i + 1;\n    while (j < blocks.length) {\n      if (removeIdx.has(j)) { j++; continue; }\n      const next = blocks[j];\n      if (!next) break;\n      // Bỏ qua các thẻ raw text không có nội dung\n      if (next.tag === 'raw' && blockPlainText(next.html).length === 0) {\n           j++; continue;\n        }\n        // Nếu là thẻ raw có nội dung, dừng lại\n      if (next.tag === 'raw') break;\n\n      const plainNext = blockPlainText(next.html);\n      // Xóa block trống\n      if (plainNext.length === 0) {\n        removeIdx.add(j);\n        j++;\n        continue;\n      }\n      // Xóa block nếu nó là caption (ngắn và không phải heading)\n      if (plainNext.length > 0 && plainNext.length <= CAPTION_MAX_LEN && !/^h[1-6]$/.test(next.tag)) {\n        removeIdx.add(j);\n        j++;\n        continue;\n      }\n      // Dừng lại nếu gặp block không phải caption\n      break;\n    }\n  }\n}\n\n// 4. Rebuild fullContent (không còn title/meta/caption)\nlet newContent = blocks.map((b, idx) => removeIdx.has(idx) ? '' : b.html).join('');\nnewContent = newContent.replace(/\\r?\\n+/g, ' '); // loại bỏ \\n trong fullContent\n\n// 5. Dọn thẻ rỗng\nfunction cleanEmptyTags(content) {\n  let prev;\n  do {\n    prev = content;\n    content = content.replace(/<span[^>]*>\\s*<\\/span>/gi, '');\n    content = content.replace(/<(p|h[1-6]|div|section|article|figure|li|blockquote)[^>]*>(\\s|&nbsp;|<br\\s*\\/?>)*<\\/\\1>/gi, '');\n    content = content.replace(/>\\s+</g, '><');\n  } while (content !== prev);\n  return content;\n}\nnewContent = cleanEmptyTags(newContent).trim();\n\n// 6. Xử lý metaDescription riêng (xóa \\n, normalize spacing)\nconst cleanMetaDescription = metaDescription.replace(/\\r?\\n+/g, ' ').replace(/\\s+/g, ' ').trim();\n\n// Trả về kết quả\nreturn [{\n  title,\n  metaDescription: cleanMetaDescription,\n  bodyContent: newContent\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        416
+      ],
+      "id": "aef99fd6-859d-4c71-9827-bbc6b15e2861",
+      "name": "AssembleFinalContent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://toshibathienbang.com/wp-json/wp/v2/media/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "alt_text",
+              "value": "={{ $('Loop Through Images').item.json.caption }}"
+            },
+            {
+              "name": "=caption",
+              "value": "={{ $('Loop Through Images').item.json.caption }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $('Loop Through Images').item.json.caption }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        192
+      ],
+      "id": "1d3529e0-ede3-455d-846c-1b8a0fd77bd2",
+      "name": "Thêm ALT Title",
+      "executeOnce": true,
+      "credentials": {
+        "wordpressApi": {
+          "id": "LeiivwP5nJAsbJrO",
+          "name": "Wordpress account toshibathienbang.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "binary",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title",
+              "cssSelector": "h1"
+            },
+            {
+              "key": "metaDescription",
+              "cssSelector": "p"
+            },
+            {
+              "key": "fullContent",
+              "cssSelector": "body",
+              "returnValue": "html"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        416
+      ],
+      "id": "2dc9c0a2-a8d3-43a7-a212-ff0a47221619",
+      "name": "Extract HTML"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "caption",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        240,
+        192
+      ],
+      "id": "57a9b840-f4ad-4c72-aa37-8717f02fc780",
+      "name": "Split"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        496,
+        176
+      ],
+      "id": "c1233c55-d116-4efa-b709-ea9963132172",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7ae1bdd9-2ed7-49c5-858e-2bc64c732e94",
+              "name": "image_html",
+              "value": "=<figure style=\"width: 600px\" class=\"wp-caption aligncenter\"><img class=\"img-center\" src=\"{{ $('Thêm ALT Title').item.json.source_url }}\" alt=\"{{ $('Thêm ALT Title').item.json.alt_text }}\"><figcaption class=\"wp-caption-text\"><em>{{ $('Thêm ALT Title').item.json.alt_text }}</em></figcaption></figure>",
+              "type": "string"
+            },
+            {
+              "id": "ba0c9fcb-6a50-4c49-8f85-63e03b89d181",
+              "name": "thumbnail_id",
+              "value": "={{ $('Thêm ALT Title').item.json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "dd28d26a-127d-497a-bf89-b1a226ea0ba3",
+      "name": "set image",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1920,
+        144
+      ],
+      "id": "16d881da-0cb6-4290-886d-03bfae45f218",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "image_html"
+            },
+            {
+              "fieldToAggregate": "title"
+            },
+            {
+              "fieldToAggregate": "metaDescription"
+            },
+            {
+              "fieldToAggregate": "bodyContent"
+            },
+            {
+              "fieldToAggregate": "number"
+            },
+            {
+              "fieldToAggregate": "slug"
+            },
+            {
+              "fieldToAggregate": "thumbnail_id"
+            },
+            {
+              "fieldToAggregate": "keyword"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        176
+      ],
+      "id": "951bf2ec-6759-4f11-b107-d81dd9222288",
+      "name": "Gom",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "title": "={{ $json.title }}",
+        "additionalFields": {
+          "content": "={{ $json.bodyContent }}",
+          "slug": "={{ $json.slug }}",
+          "status": "publish",
+          "categories": "={{ $json.category }}"
+        }
+      },
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        2784,
+        176
+      ],
+      "id": "46a35e10-e4b7-48f5-97b2-978061ad266f",
+      "name": "Up Wordpress",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "wordpressApi": {
+          "id": "LeiivwP5nJAsbJrO",
+          "name": "Wordpress account toshibathienbang.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f559471b-f948-4eb6-bee7-8d93b95a4cee",
+              "leftValue": "={{ $json[\"URL bài viết\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1520,
+        208
+      ],
+      "id": "5039a907-6847-4c50-877c-bf1d2ad429b7",
+      "name": "Conditions"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json['Danh mục']; // ví dụ: \"215-Kiến thức cơ bản Website\"\n\nconst number = input.match(/^\\d+/)?.[0] || null;\n\nreturn {\n  number\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        624
+      ],
+      "id": "fe52b87d-facb-49c7-be9a-17696ebe6d37",
+      "name": "Catagory"
+    },
+    {
+      "parameters": {
+        "jsCode": "function toSlug(str) {\n  if (!str) return \"\";\n  return str\n    .normalize(\"NFD\") // tách ký tự có dấu\n    .replace(/[\\u0300-\\u036f]/g, \"\") // xóa dấu\n    .toLowerCase() // chuyển thành chữ thường\n    .replace(/đ/g, \"d\") // Thay thế chữ đ thành d\n    .replace(/[^a-z0-9]/g, \"-\") // thay ký tự đặc biệt bằng dấu gạch ngang\n    .trim()\n    .replace(/\\s+/g, \"-\") // thay khoảng trắng bằng dấu \"-\"\n    .replace(/^-+|-+$/g, \"\"); // xóa dấu \"-\" ở đầu/cuối\n}\n\n// Ví dụ input\nconst input = $input.first().json['Từ khóa'];\n\n// Trả ra kết quả\nreturn [\n  {\n    json: {\n      slug: toSlug(input),\n      keyword: input,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        848
+      ],
+      "id": "824bad50-7327-407f-a21c-ebe9cd76ef9f",
+      "name": "Slug"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy dữ liệu từ item đầu tiên (sau khi đã gom bằng Aggregate)\nconst item = items[0].json;\n\n// Ép bodyContent về string\nlet bodyContent = Array.isArray(item.bodyContent) \n  ? item.bodyContent.join(\" \") \n  : String(item.bodyContent || \"\");\n\n// Danh sách ảnh mới từ node set image (đã ở dạng <p><img ...></p>)\nconst images = item.image_html || [];\n\n// Regex tìm tất cả thẻ <img ...>\nconst imgRegex = /<img[^>]*>/gi;\n\n// Lấy danh sách ảnh cũ\nconst oldImages = Array.from(bodyContent.matchAll(imgRegex)).map(m => m[0]) || [];\n\n// Thay thế từng ảnh cũ bằng ảnh mới\nlet newContent = bodyContent;\noldImages.forEach((oldImg, index) => {\n  if (images[index]) {\n    newContent = newContent.replace(oldImg, images[index]);\n  }\n});\n\n// Nếu số ảnh mới nhiều hơn ảnh cũ → thêm vào cuối nội dung\nif (images.length > oldImages.length) {\n  for (let i = oldImages.length; i < images.length; i++) {\n    newContent += images[i];\n  }\n}\n\nreturn [{\n  json: {\n    title: item.title ? item.title[0] : \"\",\n    metaDescription: item.metaDescription ? item.metaDescription[0] : \"\",\n    bodyContent: newContent,\n    category: $input.first().json.number[0],\n    slug: $input.first().json.slug[0],\n    thumbnail_id: $input.first().json.thumbnail_id[0],\n    keyword: $input.first().json.keyword[0],\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        176
+      ],
+      "id": "03fe48c0-0fdf-4e07-b26f-8dfbbe241581",
+      "name": "Change image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://toshibathienbang.com/wp-json/wp/v2/posts/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"meta\": {\n    \"_yoast_wpseo_metadesc\": \"{{ $('Change image').item.json.metaDescription }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3056,
+        176
+      ],
+      "id": "a0b3bd3a-1fcd-48d3-8a27-befd427f6bc4",
+      "name": "Cập nhật Meta Description",
+      "credentials": {
+        "wordpressApi": {
+          "id": "LeiivwP5nJAsbJrO",
+          "name": "Wordpress account toshibathienbang.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://toshibathienbang.com/wp-json/wp/v2/posts/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=featured_media",
+              "value": "={{ $('Change image').item.json.thumbnail_id }}"
+            },
+            {
+              "name": "excerpt",
+              "value": "={{ $('Change image').item.json.metaDescription }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3312,
+        176
+      ],
+      "id": "a5e796ba-98ff-4643-a2a3-c65685f3433d",
+      "name": "Cập nhật thumbnail",
+      "credentials": {
+        "wordpressApi": {
+          "id": "LeiivwP5nJAsbJrO",
+          "name": "Wordpress account toshibathienbang.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1xrTj7qGXqoPahPKW1JhjfVtsAGtiG_qbDaAAKtbJRsg",
+          "mode": "list",
+          "cachedResultName": "Wifim auto đăng bài SEO Content Wordpress",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xrTj7qGXqoPahPKW1JhjfVtsAGtiG_qbDaAAKtbJRsg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2071286417,
+          "mode": "list",
+          "cachedResultName": "toshibathienbang.com",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xrTj7qGXqoPahPKW1JhjfVtsAGtiG_qbDaAAKtbJRsg/edit#gid=2071286417"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Từ khóa": "={{ $('Change image').item.json.keyword }}",
+            "URL bài viết": "={{ $json.link }}"
+          },
+          "matchingColumns": [
+            "Từ khóa"
+          ],
+          "schema": [
+            {
+              "id": "Danh mục",
+              "displayName": "Danh mục",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Từ khóa",
+              "displayName": "Từ khóa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Drive",
+              "displayName": "Drive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "URL bài viết",
+              "displayName": "URL bài viết",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3584,
+        176
+      ],
+      "id": "91066a70-aff2-4cdc-b4cf-d4d02fef2a35",
+      "name": "Cập nhật URL bài viết",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Md7jxJl3FdVUduMy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2112,
+        208
+      ],
+      "id": "74ee503f-e65e-4b2d-b0ee-172ebb083140",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Conditions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Folder ID": {
+      "main": [
+        [
+          {
+            "node": "List All Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List All Files": {
+      "main": [
+        [
+          {
+            "node": "Categorize Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Categorize Files": {
+      "main": [
+        [
+          {
+            "node": "GetHTMLContent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sort Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort Images": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Images": {
+      "main": [
+        [
+          {
+            "node": "set image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "WordPress Media Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress Media Upload": {
+      "main": [
+        [
+          {
+            "node": "Thêm ALT Title",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetHTMLContent": {
+      "main": [
+        [
+          {
+            "node": "Extract Image Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Image Data": {
+      "main": [
+        [
+          {
+            "node": "Split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thêm ALT Title": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract HTML": {
+      "main": [
+        [
+          {
+            "node": "AssembleFinalContent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AssembleFinalContent": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "set image": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Gom",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gom": {
+      "main": [
+        [
+          {
+            "node": "Change image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conditions": {
+      "main": [
+        [
+          {
+            "node": "Extract Folder ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Catagory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slug",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Up Wordpress": {
+      "main": [
+        [
+          {
+            "node": "Cập nhật Meta Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catagory": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Slug": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Change image": {
+      "main": [
+        [
+          {
+            "node": "Up Wordpress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cập nhật thumbnail": {
+      "main": [
+        [
+          {
+            "node": "Cập nhật URL bài viết",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cập nhật Meta Description": {
+      "main": [
+        [
+          {
+            "node": "Cập nhật thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9733ccdf-93d3-487c-a0a3-2922d36728e5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7334a5f45b8eecee4939ec5cc7d56e78f29270603d814e474610bee7d2915fa6"
+  },
+  "id": "H5iHpHLEwkcVQiMz",
+  "tags": []
+}
